@@ -24,7 +24,7 @@ El modo demo es solo para presentaciones. Para un piloto con usuarios reales hay
 ## Configurar Supabase
 
 1. Crea un proyecto Supabase y ejecuta **todo el contenido actualizado** de [`supabase/migrations/202609290001_mvp.sql`](supabase/migrations/202609290001_mvp.sql) en el SQL Editor. La migración crea PostGIS, tablas, políticas RLS, Storage privado y funciones para cotizaciones y estados. Si una ejecución anterior falló, vuelve a ejecutar el archivo completo; la migración se puede reintentar.
-2. En **Authentication → Sign In / Providers**, permite registro con correo y contraseña. Mantén **Confirm email** activado y configura **Authentication → URL Configuration → Site URL** con `http://localhost:4200` para pruebas locales. La app avisa al usuario que debe confirmar el correo antes de ingresar. Al desplegar, cambia Site URL por el dominio de producción y añade los destinos adicionales que necesites en Redirect URLs.
+2. En **Authentication → Sign In / Providers**, permite registro con correo y contraseña y mantén **Confirm email** activado. En **Authentication → URL Configuration**, el proyecto usa `https://manocerca-mvp.vercel.app` como **Site URL**. Las **Redirect URLs** incluyen ese dominio y `http://localhost:4200` para desarrollo local. La app avisa al usuario que debe confirmar el correo antes de ingresar.
 3. Copia `.env.example` a `.env` para desarrollo local y configura estas variables. En Vercel, agrégalas en **Environment Variables**:
 
    | Variable | Valor |
@@ -39,7 +39,9 @@ El mapa usa Leaflet + OpenStreetMap y se centra en Arequipa. La búsqueda real u
 
 ## Desplegar en Vercel
 
-Importa este repositorio en Vercel. [`vercel.json`](vercel.json) fija el comando `npm run build`, el directorio `dist/hogar-cerca/browser` y la redirección de rutas de Angular. Puedes desplegarlo **sin Supabase** para presentar el mockup; aparecerá la banda «Modo demostración». Para el piloto, añade las dos variables públicas anteriores y vuelve a desplegar. El nombre anterior `SUPABASE_ANON_KEY` también se acepta por compatibilidad.
+El MVP está publicado en [manocerca-mvp.vercel.app](https://manocerca-mvp.vercel.app) dentro del proyecto `mvp-fei/manocerca-mvp`. [`vercel.json`](vercel.json) fija el comando `npm run build`, el directorio `dist/hogar-cerca/browser` y la redirección de rutas de Angular. Las variables `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` están configuradas para Production y Preview. El nombre anterior `SUPABASE_ANON_KEY` también se acepta por compatibilidad.
+
+El proyecto de Vercel se desplegó desde esta carpeta con la CLI; todavía no está conectado a un repositorio Git para despliegues automáticos. Para publicar cambios desde el checkout vinculado, ejecuta `npx vercel@latest deploy --prod --scope mvp-fei`. Los archivos `.env*` y la configuración generada se excluyen de la subida con [`.vercelignore`](.vercelignore).
 
 Node.js 22.12 o posterior es compatible con la versión Angular usada aquí. Se recomienda fijar Node 22 en la configuración del proyecto Vercel.
 

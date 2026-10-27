@@ -1,0 +1,4 @@
+.env
+.env.*
+src/app/config.generated.ts
+dist/
