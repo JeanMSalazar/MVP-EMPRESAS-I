@@ -37,6 +37,11 @@ export const routes: Routes = [
     title: 'Crear cuenta | ManoCerca',
   },
   {
+    path: 'recuperar-contrasena',
+    loadComponent: () => import('./discover').then((m) => m.PasswordRecoveryPage),
+    title: 'Recuperar contraseña | ManoCerca',
+  },
+  {
     path: 'solicitar',
     loadComponent: () => import('./discover').then((m) => m.RequestFormPage),
     title: 'Solicitar servicio | ManoCerca',

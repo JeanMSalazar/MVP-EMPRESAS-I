@@ -2,3 +2,8 @@
 .env.*
 src/app/config.generated.ts
 dist/
+.codex-finalizer/
+.codex-presentaciones/
+capturas-vercel/
+entregables/
+supabase/

@@ -1,8 +1,9 @@
-import { Component, inject } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Marketplace } from './marketplace';
 import {
+  AcceptedContact,
   Incident,
   Professional,
   Profile,
@@ -688,6 +689,22 @@ export class DashboardPage {
             }
           </div>
           <aside>
+            @if (can_show_contact()) {
+              <div class="surface-card service-contact">
+                <h2>Datos para coordinar</h2>
+                @if (contact_state() === 'ready' && contact(); as person) {
+                  <p><strong>{{ person.full_name }}</strong></p>
+                  <p>Teléfono: <a [href]="'tel:' + person.phone">{{ person.phone }}</a></p>
+                  <small>Coordinen directamente la visita por llamada o WhatsApp.</small>
+                } @else if (contact_state() === 'loading') {
+                  <p>Obteniendo contacto...</p>
+                } @else if (contact_state() === 'denied') {
+                  <p>Los datos de contacto no están disponibles para esta cotización.</p>
+                } @else if (contact_state() === 'error') {
+                  <p role="alert">No se pudo cargar el contacto. Vuelve a abrir esta solicitud.</p>
+                }
+              </div>
+            }
             <div class="surface-card quote-panel">
               <span class="aside-icon">✦</span>
               <h2>
@@ -808,6 +825,47 @@ export class DashboardPage {
 export class RequestDetailPage {
   readonly market = inject(Marketplace);
   readonly route = inject(ActivatedRoute);
+  readonly contact = signal<AcceptedContact | null>(null);
+  readonly contact_state = signal<'idle' | 'loading' | 'ready' | 'denied' | 'error'>('idle');
+  private contact_key = '';
+
+  constructor() {
+    effect(() => {
+      const service = this.service();
+      const user = this.market.user();
+      if (!service || !user || !this.can_show_contact()) {
+        this.contact_key = '';
+        this.contact.set(null);
+        this.contact_state.set('idle');
+        return;
+      }
+      const key = `${service.request_id}:${service.quote_id}:${user.id}`;
+      if (key === this.contact_key) return;
+      this.contact_key = key;
+      this.contact.set(null);
+      this.contact_state.set('loading');
+      void this.market.get_accepted_contact(service.request_id).then((person) => {
+        if (this.contact_key !== key) return;
+        this.contact.set(person);
+        this.contact_state.set(person ? 'ready' : 'denied');
+      }).catch(() => {
+        if (this.contact_key !== key) return;
+        this.contact.set(null);
+        this.contact_state.set('error');
+      });
+    });
+  }
+
+  can_show_contact(): boolean {
+    const service = this.service();
+    const user = this.market.user();
+    return !this.market.is_demo && !!service && !!user
+      && (service.status === 'ACCEPTED' || service.status === 'COMPLETED'
+        || service.status === 'DISPUTED')
+      && (user.id === service.client_id || user.id === service.professional_id)
+      && this.market.quotes().some((quote) => quote.id === service.quote_id
+        && quote.status === 'ACCEPTED');
+  }
   price = 0;
   quote_description = '';
   notes = '';

@@ -8,7 +8,8 @@
     "prebuild": "node scripts/write-config.mjs",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "check:prod": "node scripts/check-prod.mjs"
   },
   "private": true,
   "packageManager": "npm@10.9.7",

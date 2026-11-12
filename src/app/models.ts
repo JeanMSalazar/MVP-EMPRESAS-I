@@ -11,6 +11,12 @@ export interface Profile {
   zone: string;
 }
 
+export interface AcceptedContact {
+  id: string;
+  full_name: string;
+  phone: string;
+}
+
 export interface Professional {
   id: string;
   full_name: string;

@@ -411,6 +411,9 @@ export class ProfessionalPage {
               {{ working ? 'Un momento...' : is_register ? 'Crear mi cuenta ↗' : 'Ingresar ↗' }}
             </button>
           </form>
+          @if (!is_register) {
+            <p class="auth-switch"><a routerLink="/recuperar-contrasena">Olvidé mi contraseña</a></p>
+          }
           <p class="auth-switch">
             {{ is_register ? '¿Ya tienes una cuenta?' : '¿Aún no tienes cuenta?' }}
             <a
@@ -485,6 +488,99 @@ export class AuthPage {
   async enter_demo(role: 'client' | 'professional'): Promise<void> {
     this.market.demo_as(role);
     await this.router.navigateByUrl('/panel');
+  }
+}
+
+@Component({
+  selector: 'app-password-recovery',
+  imports: [FormsModule, RouterLink],
+  template: `
+    <section class="auth-page">
+      <div class="container auth-grid">
+        <div class="auth-intro">
+          <div class="eyebrow">TU CUENTA EN MANOCERCA</div>
+          <h1>Recupera tu acceso.</h1>
+          <p>Te enviaremos un enlace a tu correo para crear una nueva contraseña.</p>
+        </div>
+        <div class="auth-card">
+          @if (updated) {
+            <h2>Contraseña actualizada</h2>
+            <p class="form-success" role="status">Ya puedes continuar en ManoCerca.</p>
+            <a class="button button-primary button-full" routerLink="/panel">Ir a mi espacio ↗</a>
+          } @else if (market.password_recovery()) {
+            <h2>Crear nueva contraseña</h2>
+            <p>Introduce una contraseña nueva para tu cuenta.</p>
+            <form (ngSubmit)="save_password()">
+              <label>Nueva contraseña<input name="password" type="password"
+                [(ngModel)]="password" required minlength="6" autocomplete="new-password" /></label>
+              <label>Confirmar contraseña<input name="confirmation" type="password"
+                [(ngModel)]="confirmation" required minlength="6" autocomplete="new-password" /></label>
+              @if (error) { <p class="form-error" role="alert">{{ error }}</p> }
+              <button class="button button-primary button-full" type="submit" [disabled]="working">
+                {{ working ? 'Un momento...' : 'Guardar contraseña ↗' }}
+              </button>
+            </form>
+          } @else {
+            <h2>Olvidé mi contraseña</h2>
+            <p>Escribe el correo con el que te registraste.</p>
+            <form (ngSubmit)="send_email()">
+              <label>Correo electrónico<input name="email" type="email" [(ngModel)]="email"
+                required autocomplete="email" placeholder="tu@correo.com" /></label>
+              @if (error) { <p class="form-error" role="alert">{{ error }}</p> }
+              @if (message) { <p class="form-success" role="status">{{ message }}</p> }
+              <button class="button button-primary button-full" type="submit" [disabled]="working">
+                {{ working ? 'Un momento...' : 'Enviar enlace ↗' }}
+              </button>
+            </form>
+            <p class="auth-switch"><a routerLink="/ingresar">Volver a ingresar</a></p>
+          }
+        </div>
+      </div>
+    </section>
+  `,
+})
+export class PasswordRecoveryPage {
+  readonly market = inject(Marketplace);
+  email = '';
+  password = '';
+  confirmation = '';
+  error = new URLSearchParams(window.location.hash.slice(1)).has('error')
+    ? 'El enlace venció o no es válido. Solicita uno nuevo.' : '';
+  message = '';
+  working = false;
+  updated = false;
+
+  async send_email(): Promise<void> {
+    this.error = '';
+    this.message = '';
+    this.working = true;
+    try {
+      await this.market.request_password_reset(this.email.trim());
+      this.message = 'Si existe una cuenta con ese correo, recibirás un enlace de recuperación.';
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : String(error);
+    } finally {
+      this.working = false;
+    }
+  }
+
+  async save_password(): Promise<void> {
+    this.error = '';
+    if (this.password !== this.confirmation) {
+      this.error = 'Las contraseñas no coinciden.';
+      return;
+    }
+    this.working = true;
+    try {
+      await this.market.update_password(this.password);
+      this.password = '';
+      this.confirmation = '';
+      this.updated = true;
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : String(error);
+    } finally {
+      this.working = false;
+    }
   }
 }
 

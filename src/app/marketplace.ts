@@ -2,6 +2,7 @@ import { Injectable, InjectionToken, computed, inject, signal } from '@angular/c
 import { createClient, RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import { public_config } from './config.generated';
 import {
+  AcceptedContact,
   Incident,
   Notice,
   Professional,
@@ -255,13 +256,16 @@ export class Marketplace {
   readonly busy = signal(false);
   readonly error = signal('');
   readonly toast = signal('');
+  readonly password_recovery = signal(false);
   readonly unread_count = computed(
     () => this.notices().filter((item) => item.user_id === this.user()?.id && !item.read).length,
   );
 
   constructor() {
     void this.load();
-    this.supabase?.auth.onAuthStateChange(() => {
+    this.supabase?.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') this.password_recovery.set(true);
+      if (event === 'SIGNED_OUT') this.password_recovery.set(false);
       setTimeout(() => void this.load(), 0);
     });
   }
@@ -510,6 +514,36 @@ export class Marketplace {
     } catch (error) {
       this.fail('No se pudo iniciar sesión', error);
     }
+  }
+
+  async get_accepted_contact(request_id: string): Promise<AcceptedContact | null> {
+    if (this.is_demo) return null;
+    const result = await this.supabase!.rpc('get_accepted_contact', { p_request_id: request_id });
+    if (result.status === 401 || result.status === 403 || result.error?.code === '42501')
+      return null;
+    if (result.error) throw new Error('No se pudieron cargar los datos de contacto.');
+    const row = Array.isArray(result.data) ? result.data[0] : null;
+    if (!row) return null;
+    if (typeof row.id !== 'string' || typeof row.full_name !== 'string'
+      || typeof row.phone !== 'string')
+      throw new Error('La respuesta de contacto no tiene el formato esperado.');
+    return row as AcceptedContact;
+  }
+
+  async request_password_reset(email: string): Promise<void> {
+    if (this.is_demo) throw new Error('La recuperación requiere conexión con Supabase.');
+    const result = await this.supabase!.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/recuperar-contrasena`,
+    });
+    if (result.error) throw new Error('No se pudo enviar el correo de recuperación.');
+  }
+
+  async update_password(password: string): Promise<void> {
+    if (this.is_demo || !this.password_recovery())
+      throw new Error('Abre el enlace de recuperación recibido por correo.');
+    const result = await this.supabase!.auth.updateUser({ password });
+    if (result.error) throw new Error('No se pudo actualizar la contraseña.');
+    this.password_recovery.set(false);
   }
 
   async logout(): Promise<void> {
